@@ -104,6 +104,11 @@ class PlayerBotMgr
         bool IsChatBot(uint32 playerGuid);
         bool IsSavingAllowed() { return m_confAllowSaving; }
 
+        // Party swap (PartySwap.cpp): the client playing `clientGuid` takes over the party bot
+        // `botGuid`, which becomes the client's character, and the old one becomes a party bot.
+        // World thread only, between updates (queued by `.party swap`).
+        void SwapPartyControl(ObjectGuid clientGuid, ObjectGuid botGuid, uint32 queuedAt);
+
         uint32 GenBotAccountId() { return ++m_maxAccountId; }
         PlayerBotStats& GetStats(){ return m_stats; }
         void Start() { m_confEnableRandomBots = true; }

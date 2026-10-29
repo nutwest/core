@@ -115,6 +115,14 @@ ChatCommand * ChatHandler::getCommandTable()
         { nullptr,      0,                      false, nullptr,                                        "", nullptr },
     };
 
+    static ChatCommand partyCommandTable[] =
+    {
+        { "swap",       SEC_ADMINISTRATOR,      false, &ChatHandler::HandlePartySwapCommand,           "", nullptr },
+        { "status",     SEC_ADMINISTRATOR,      false, &ChatHandler::HandlePartyStatusCommand,         "", nullptr },
+        { "lead",       SEC_ADMINISTRATOR,      false, &ChatHandler::HandlePartyLeadCommand,           "", nullptr },
+        { nullptr,      0,                      false, nullptr,                                        "", nullptr },
+    };
+
     static ChatCommand battleBotAddCommandTable[] =
     {
         { "alterac",    SEC_ADMINISTRATOR,      true, &ChatHandler::HandleBattleBotAddAlteracCommand, "", nullptr },
@@ -1218,6 +1226,8 @@ ChatCommand * ChatHandler::getCommandTable()
         { "service",        SEC_ADMINISTRATOR,  true, nullptr,                                         "", serviceCommandTable  },
         { "bot",            SEC_ADMINISTRATOR,  true, nullptr,                              "Manage bots", botCommandTable      },
         { "ahbot",          SEC_ADMINISTRATOR,  true, nullptr,                            "Manage AH bot", ahbotCommandTable    },
+        // Before "partybot": the first command `.party` abbreviates wins.
+        { "party",          SEC_ADMINISTRATOR,  false, nullptr,              "Swap the played party member", partyCommandTable },
         { "partybot",       SEC_ADMINISTRATOR,  false, nullptr,                       "Manage party bots", partyBotCommandTable },
         { "battlebot",      SEC_ADMINISTRATOR,  true, nullptr,                      "Manage battle bots", battleBotCommandTable},
         { "world",          SEC_ADMINISTRATOR,  false, nullptr,                                        "", worldCommandTable    },

@@ -190,6 +190,7 @@ set (game_SRCS
     PacketBroadcast/MovementBroadcaster.cpp
     PacketBroadcast/PlayerBroadcaster.cpp
     PlayerBots/PartyBotAI.cpp
+    PlayerBots/PartySwap.cpp
     PlayerBots/CombatBotBaseAI.cpp
     PlayerBots/BattleBotAI.cpp
     PlayerBots/BattleBotWaypoints.cpp
