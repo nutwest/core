@@ -161,6 +161,12 @@ struct OpcodeHandler
 // returns true if it's completely out of range
 inline bool IsDefinitelyBogusOpcode(uint16 opcode) { return opcode >= NUM_MSG_TYPES; }
 
+// Not a client opcode: benilla's party swap (`.party swap`). It precedes the new character's
+// login burst and tells the client which player it now controls. It lies outside the client's
+// opcode table, so it is only sent to a client that asked for the swap.
+// Body: uint64 old player guid, uint64 new player guid.
+static constexpr uint16 SMSG_PARTY_SWAP = 0x400;
+
 // Will work for any opcode, might return `<unknown opcode>` and without impl
 OpcodeHandler const& LookupOpcodeHandler(uint16 id);
 // Will work for any opcode, might return `<unknown opcode>`
