@@ -174,6 +174,8 @@ WorldSocket::HandlerResult WorldSocket::_HandleCompleteReceivedPacket(std::uniqu
                 }
                 return _HandleAuthSession(*packet);
             default:
+            {
+                std::lock_guard<std::mutex> guard(m_sessionLock);
                 if (m_Session == nullptr)
                 {
                     sLog.Out(LOG_BASIC, LOG_LVL_ERROR, "WorldSocket::ProcessIncoming: Client not authed opcode = %u", uint32(opcode));
@@ -182,6 +184,7 @@ WorldSocket::HandlerResult WorldSocket::_HandleCompleteReceivedPacket(std::uniqu
 
                 m_Session->QueueBinaryPacket(std::move(packet));
                 return HandlerResult::Okay;
+            }
         }
     }
     catch (ByteBufferException&)
@@ -493,6 +496,7 @@ WorldSocket::HandlerResult WorldSocket::_HandlePing(WorldPacket& recvPacket)
 
     // critical section
     {
+        std::lock_guard<std::mutex> guard(m_sessionLock);
         if (m_Session)
         {
 #if SUPPORTED_CLIENT_BUILD > CLIENT_BUILD_1_8_4

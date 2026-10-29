@@ -29,6 +29,9 @@
 #include "WorldSession.h"
 #include "IO/Timer/TimerHandle.h"
 
+#include <functional>
+#include <mutex>
+
 class WorldSocketMgr;
 
 class WorldSocket final : public std::enable_shared_from_this<WorldSocket>
@@ -69,6 +72,9 @@ private:
 
     /// Session to which received packets are routed
     WorldSession* m_Session; // TODO: Rename me to m_session
+    /// Guards m_Session against a change from the world thread (FinalizeSession, ChangeSession)
+    /// while the network thread routes a packet to it
+    std::mutex m_sessionLock;
 
     /// Random seed used in SMSG_AUTH_CHALLENGE and CMSG_AUTH_SESSION
     uint32 const m_authSeed;
@@ -118,7 +124,17 @@ public:
 
     void FinalizeSession()
     {
+        std::lock_guard<std::mutex> guard(m_sessionLock);
         m_Session = nullptr;
+    }
+
+    /// Routes this connection's packets to `session` from now on. `moveState` runs under the
+    /// same lock, so no packet is routed while the sessions' state is moved. Party swap only.
+    void ChangeSession(WorldSession* session, std::function<void()> const& moveState)
+    {
+        std::lock_guard<std::mutex> guard(m_sessionLock);
+        moveState();
+        m_Session = session;
     }
 
     // ----- Exposing `m_socket` features -----
