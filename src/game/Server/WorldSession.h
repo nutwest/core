@@ -311,6 +311,9 @@ class WorldSession
         PlayerBotEntry* GetBot() const { return m_bot.get(); }
         void SetBot(std::shared_ptr<PlayerBotEntry> const& b) { m_bot = b; }
 
+        // Party swap: this bot session takes over `client`'s connection and gives it the bot role
+        void TakeOverClient(WorldSession& client);
+
         // Warden / Anticheat
         void InitWarden();
         void SetSessionKey(BigNumber const& sessionKey) { m_sessionKey = sessionKey; }

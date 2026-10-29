@@ -43,6 +43,8 @@
 #include "MasterPlayer.h"
 #include "PlayerBroadcaster.h"
 #include "Crypto/Hash/MD5.h"
+#include "AccountMgr.h"
+#include "SniffFile.h"
 
 #include <limits>
 
@@ -1175,6 +1177,62 @@ void WorldSession::ExecuteOpcode(OpcodeHandlerPacketImplDetails const& opHandler
         if (_player->IsHasDelayedTeleport())
             _player->TeleportTo(_player->m_teleportDest, _player->m_teleportOptions);
     }
+}
+
+// Party swap. This socketless bot session takes the client connection of `client`, and `client`
+// becomes a socketless bot session in its place. Each session keeps its own account, player and
+// MasterPlayer (action buttons, social, mail): Player::SaveToDB writes the session's account, so
+// the sessions themselves must not trade players. Runs on the world thread between updates.
+void WorldSession::TakeOverClient(WorldSession& client)
+{
+    MANGOS_ASSERT(!m_socket && m_bot && client.m_socket && !client.m_bot);
+
+    std::shared_ptr<WorldSocket> const socket = client.m_socket;
+    socket->ChangeSession(this, [&]()
+    {
+        m_socket = socket;
+        client.m_socket = nullptr;
+        m_remoteIpAddress = client.m_remoteIpAddress;
+        client.m_remoteIpAddress = "<BOT>";
+        m_latency = client.m_latency;
+        m_gameBuild = client.m_gameBuild;
+        m_clientOS = client.m_clientOS;
+        m_clientPlatform = client.m_clientPlatform;
+        m_sessionDbcLocale = client.m_sessionDbcLocale;
+        m_sessionDbLocaleIndex = client.m_sessionDbLocaleIndex;
+        m_sessionKey = client.m_sessionKey;
+        m_sniffFile = std::move(client.m_sniffFile);
+        client.m_bot = std::move(m_bot);
+        m_bot = nullptr;
+        m_idleTime = WorldTimer::getMSTime();
+
+        // What the client sent was for the old character, and what the bot AI queued was for
+        // this one: neither applies after the swap.
+        for (auto& queue : client.m_recvQueue)
+            queue.clear();
+        for (auto& queue : m_recvQueue)
+            queue.clear();
+
+        // The old character is moved by the server from now on, so nothing waits on its client's
+        // acks. The new one is the client's once it claims it (CMSG_SET_ACTIVE_MOVER), as at login.
+        client.m_clientMoverGuid = ObjectGuid();
+        m_clientMoverGuid = ObjectGuid();
+        client.m_moveRejectTime = 0;
+        m_moveRejectTime = 0;
+    });
+
+    if (client.m_warden)
+    {
+        sAnticheatMgr->RemoveWardenSession(client.m_warden);
+        client.m_warden = nullptr;
+        InitWarden();
+    }
+
+    // A bot session is made with the account id alone (PlayerBotMgr::AddBot).
+    if (m_username.empty())
+        sAccountMgr.GetName(m_accountId, m_username);
+    LoadGlobalAccountData();
+    LoadTutorialsData();
 }
 
 void WorldSession::InitWarden()
