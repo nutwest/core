@@ -263,6 +263,9 @@ void PlayerBotMgr::SwapPartyControl(ObjectGuid clientGuid, ObjectGuid botGuid, u
     // its new character itself (CMSG_SET_ACTIVE_MOVER), on SMSG_PARTY_SWAP.
     if (sWorld.getConfig(CONFIG_BOOL_SEND_LOOT_ROLL_UPON_RECONNECT))
         group->SendLootStartRollsForPlayer(newPlayer);
+    // The group as the new character sees it (SMSG_GROUP_LIST lists the others, not oneself):
+    // the client still holds the old character's list, which names the new one and not the old.
+    group->SendUpdate();
 
     uint32 const end = WorldTimer::getMSTime();
     sLog.Out(LOG_BASIC, LOG_LVL_MINIMAL,
