@@ -34,8 +34,10 @@
 #include "TimePeriod.h"
 
 #include "Database/DatabaseEnv.h"
+#include "Config/Config.h"
 
-// Target server framerate is 1000/WORLD_SLEEP_CONST
+// Target server framerate is 1000/WORLD_SLEEP_CONST, unless `World.TickMs` sets another tick
+// (benilla's single-player party server runs a shorter one, so a queued `.party swap` waits less).
 #define WORLD_SLEEP_CONST 50
 
 #ifdef WIN32
@@ -59,6 +61,7 @@ void WorldRunnable::operator()()
     // Aim for WORLD_SLEEP_CONST update times
     // If we update slower, update again immediately.
     // If we update faster, then slow down!
+    uint32 const tickMs = std::max(1, std::min(1000, sConfig.GetIntDefault("World.TickMs", WORLD_SLEEP_CONST)));
     auto prevTime = WorldTimer::getMSTime();
     uint32 currTime = 0u;
 
@@ -105,8 +108,8 @@ void WorldRunnable::operator()()
         auto updateTime = WorldTimer::getMSTimeDiffToNow(currTime);
         prevTime = currTime;
 
-        if (updateTime < WORLD_SLEEP_CONST)
-            std::this_thread::sleep_for(std::chrono::milliseconds(WORLD_SLEEP_CONST - updateTime));
+        if (updateTime < tickMs)
+            std::this_thread::sleep_for(std::chrono::milliseconds(tickMs - updateTime));
 
         #ifdef WIN32
             if (m_ServiceStatus == 0) World::StopNow(SHUTDOWN_EXIT_CODE);
