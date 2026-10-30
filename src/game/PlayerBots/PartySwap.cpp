@@ -246,7 +246,8 @@ void PlayerBotMgr::SwapPartyControl(ObjectGuid clientGuid, ObjectGuid botGuid, u
 
     DestroyItemsFor(oldPlayer, newPlayer);
     newPlayer->SendPacketsAtRelogin();
-    newSession->SendAccountDataTimes();
+    // No SMSG_ACCOUNT_DATA_MD5: the party shares one UI configuration, so the client keeps what it
+    // holds and fetches no character's stored data (macros, bindings, chat) on a swap.
     newPlayer->GetSocial()->SendFriendList();
     newPlayer->GetSocial()->SendIgnoreList();
     if (!newPlayer->IsAlive())
