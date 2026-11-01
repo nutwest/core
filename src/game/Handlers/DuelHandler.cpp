@@ -26,6 +26,7 @@
 #include "Opcodes.h"
 #include "UpdateData.h"
 #include "Player.h"
+#include "World.h"
 
 void WorldSession::HandleDuelAcceptedOpcode(WorldPackets::Duel::DuelAccepted const& /*packet*/)
 {
@@ -38,7 +39,7 @@ void WorldSession::HandleDuelAcceptedOpcode(WorldPackets::Duel::DuelAccepted con
     if (pl == pl->m_duel->initiator || !plTarget || !plTarget->m_duel || pl == plTarget || pl->m_duel->startTime != 0 || plTarget->m_duel->startTime != 0)
         return;
 
-    time_t now = time(nullptr);
+    time_t now = sWorld.GetGameTime();
     pl->m_duel->startTimer = now;
     plTarget->m_duel->startTimer = now;
 

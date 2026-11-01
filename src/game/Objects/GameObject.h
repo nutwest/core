@@ -100,7 +100,7 @@ class GameObject : public SpellCaster
         time_t GetRespawnTime() const { return m_respawnTime; }
         time_t GetRespawnTimeEx() const
         {
-            time_t now = time(nullptr);
+            time_t now = WorldTimer::getGameTime();
             if (m_respawnTime > now)
                 return m_respawnTime;
             else
@@ -111,7 +111,7 @@ class GameObject : public SpellCaster
         void JustDespawnedWaitingRespawn();
         void SetRespawnTime(time_t respawn)
         {
-            m_respawnTime = respawn > 0 ? time(nullptr) + respawn : 0;
+            m_respawnTime = respawn > 0 ? WorldTimer::getGameTime() + respawn : 0;
             m_respawnDelayTime = respawn > 0 ? uint32(respawn) : 0;
         }
         void SetRespawnDelay(time_t respawn)

@@ -345,7 +345,7 @@ void Creature::RemoveCorpse()
 
     // script can set time (in seconds) explicit, override the original
     if (respawnDelay)
-        m_respawnTime = time(nullptr) + respawnDelay;
+        m_respawnTime = sWorld.GetGameTime() + respawnDelay;
 
     float x, y, z, o;
     GetRespawnCoord(x, y, z, &o);
@@ -815,7 +815,7 @@ void Creature::Update(uint32 update_diff, uint32 diff)
             break;
         case DEAD:
         {
-            if (m_respawnTime <= time(nullptr) && (!m_isSpawningLinked || GetMap()->GetCreatureLinkingHolder()->CanSpawn(this)))
+            if (m_respawnTime <= sWorld.GetGameTime() && (!m_isSpawningLinked || GetMap()->GetCreatureLinkingHolder()->CanSpawn(this)))
             {
                 DEBUG_FILTER_LOG(LOG_FILTER_AI_AND_MOVEGENSS, "Respawning...");
                 m_respawnTime = 0;
@@ -898,7 +898,7 @@ void Creature::Update(uint32 update_diff, uint32 diff)
             // Cf. Daemon's fix [c1491] & my other patch on top of it [c1527)
             // Mobs 11357, 8901, 14826 etc. have very short respawn times. Without this condition, all
             // mobs spawned via event/script despawn (loot included) after about 25s, with no way to change it in the DB since there is no fixed GUID.
-            if (m_corpseDecayTimer <= update_diff || (m_respawnTime <= time(nullptr) && GetDBTableGUIDLow() && !IsPet()))
+            if (m_corpseDecayTimer <= update_diff || (m_respawnTime <= sWorld.GetGameTime() && GetDBTableGUIDLow() && !IsPet()))
             {
                 if (IsInWorld())                            // can be despawned by update pool
                 {
@@ -1971,7 +1971,7 @@ bool Creature::LoadFromDB(uint32 guidlow, Map* map, bool force)
 
     m_respawnTime  = map->GetPersistentState()->GetCreatureRespawnTime(GetGUIDLow());
 
-    if (m_respawnTime > time(nullptr))                         // not ready to respawn
+    if (m_respawnTime > sWorld.GetGameTime())                         // not ready to respawn
     {
         m_deathState = DEAD;
         if (CanFly())
@@ -2256,7 +2256,7 @@ void Creature::SetDeathState(DeathState s)
             if (m_creatureData->spawn_flags & SPAWN_FLAG_DYNAMIC_RESPAWN_TIME && sWorld.GetActiveSessionCount() > BLIZZLIKE_REALM_POPULATION)
                 respawnDelay *= float(BLIZZLIKE_REALM_POPULATION) / float(sWorld.GetActiveSessionCount());
         }
-        m_respawnTime = time(nullptr) + respawnDelay;        // respawn delay (spawntimesecs)
+        m_respawnTime = sWorld.GetGameTime() + respawnDelay;        // respawn delay (spawntimesecs)
 
         // always save boss respawn time at death to prevent crash cheating
         if (sWorld.getConfig(CONFIG_BOOL_SAVE_RESPAWN_TIME_IMMEDIATELY) || IsWorldBoss())
@@ -2391,7 +2391,7 @@ void Creature::Respawn()
     {
         if (HasStaticDBSpawnData())
             GetMap()->GetPersistentState()->SaveCreatureRespawnTime(GetGUIDLow(), 0);
-        m_respawnTime = time(nullptr);                         // respawn at next tick
+        m_respawnTime = sWorld.GetGameTime();                         // respawn at next tick
     }
 }
 
@@ -2787,10 +2787,10 @@ void Creature::SaveRespawnTime()
     if (IsPet() || !HasStaticDBSpawnData())
         return;
 
-    if (m_respawnTime > time(nullptr))                         // dead (no corpse)
+    if (m_respawnTime > sWorld.GetGameTime())                         // dead (no corpse)
         GetMap()->GetPersistentState()->SaveCreatureRespawnTime(GetGUIDLow(), m_respawnTime);
     else if (m_corpseDecayTimer > 0)                        // dead (corpse)
-        GetMap()->GetPersistentState()->SaveCreatureRespawnTime(GetGUIDLow(), time(nullptr) + m_respawnDelay + m_corpseDecayTimer / IN_MILLISECONDS);
+        GetMap()->GetPersistentState()->SaveCreatureRespawnTime(GetGUIDLow(), sWorld.GetGameTime() + m_respawnDelay + m_corpseDecayTimer / IN_MILLISECONDS);
 }
 
 bool Creature::IsOutOfThreatArea(Unit const* pVictim) const
@@ -2810,7 +2810,7 @@ bool Creature::IsOutOfThreatArea(Unit const* pVictim) const
         // Use attack distance in distance check if threat radius is lower. This prevents creature bounce in and out of combat every update tick.
         float threatAreaDistance = std::max(GetAttackDistance(pVictim) * 1.5f, sWorld.getConfig(CONFIG_FLOAT_THREAT_RADIUS));
         bool inThreatArea = IsWithinDist3d(m_combatStartX, m_combatStartY, m_combatStartZ, threatAreaDistance) || pVictim->IsWithinDist3d(m_combatStartX, m_combatStartY, m_combatStartZ, threatAreaDistance);
-        if (!inThreatArea && (GetLastLeashExtensionTime() + 12 < time(nullptr)))
+        if (!inThreatArea && (GetLastLeashExtensionTime() + 12 < sWorld.GetGameTime()))
             return true;
     }
 
@@ -2820,7 +2820,7 @@ bool Creature::IsOutOfThreatArea(Unit const* pVictim) const
 std::shared_ptr<time_t> const& Creature::GetLastLeashExtensionTimePtr() const
 {
     if (m_lastLeashExtensionTime == nullptr)
-        m_lastLeashExtensionTime = std::make_shared<time_t>(time(nullptr));
+        m_lastLeashExtensionTime = std::make_shared<time_t>(sWorld.GetGameTime());
     return m_lastLeashExtensionTime;
 }
 
@@ -2841,7 +2841,7 @@ time_t Creature::GetLastLeashExtensionTime() const
 
 void Creature::UpdateLeashExtensionTime()
 {
-    (*GetLastLeashExtensionTimePtr()) = time(nullptr);
+    (*GetLastLeashExtensionTimePtr()) = sWorld.GetGameTime();
 }
 
 
@@ -2909,7 +2909,7 @@ void Creature::LoadCreatureAddon(bool reload)
 void Creature::SendZoneUnderAttackMessage(Player const* attacker)
 {
     uint32 areaId = GetAreaId();
-    time_t now = time(nullptr);
+    time_t now = sWorld.GetGameTime();
     static std::unordered_map<uint32, time_t> areaAttackedCooldowns;
     if (areaAttackedCooldowns[areaId] + 10 < now)
     {
@@ -3304,7 +3304,7 @@ void Creature::AddCooldown(SpellEntry const* spellEntry, ItemPrototype const* /*
 
 time_t Creature::GetRespawnTimeEx() const
 {
-    time_t now = time(nullptr);
+    time_t now = sWorld.GetGameTime();
     if (m_respawnTime > now)                                // dead (no corpse)
         return m_respawnTime;
     else if (m_corpseDecayTimer > 0)                        // dead (corpse)
@@ -3373,7 +3373,7 @@ void Creature::AllLootRemovedFromCorpse()
             corpseLootedDelay = 0;
 
         // if m_respawnTime is not expired already
-        if (m_respawnTime >= time(nullptr))
+        if (m_respawnTime >= sWorld.GetGameTime())
         {
             // if spawntimesecs is larger than default corpse delay always use corpseLootedDelay
             if (m_respawnDelay > m_corpseDelay)
@@ -3441,7 +3441,7 @@ uint32 Creature::GetVendorItemCurrentCount(VendorItem const* vItem)
 
     VendorItemCount* vCount = &*itr;
 
-    time_t ptime = time(nullptr);
+    time_t ptime = sWorld.GetGameTime();
 
     if (vCount->lastIncrementTime + vCount->restockDelay <= ptime)
     {
@@ -3486,7 +3486,7 @@ uint32 Creature::UpdateVendorItemCurrentCount(VendorItem const* vItem, uint32 us
 
     VendorItemCount* vCount = &*itr;
 
-    time_t ptime = time(nullptr);
+    time_t ptime = sWorld.GetGameTime();
 
     if (vCount->lastIncrementTime + vCount->restockDelay <= ptime)
     {
@@ -4060,14 +4060,14 @@ SpellCastResult Creature::TryToCast(Unit* pTarget, SpellEntry const* pSpellInfo,
 
 time_t Creature::GetCombatTime(bool total) const
 {
-    auto diff = time(nullptr) - m_combatStartTime;
+    auto diff = sWorld.GetGameTime() - m_combatStartTime;
 
     return total ? sWorld.getConfig(CONFIG_UINT32_LONGCOMBAT) * m_combatResetCount + diff : diff;
 }
 
 void Creature::ResetCombatTime(bool combat)
 {
-    m_combatStartTime = time(nullptr);
+    m_combatStartTime = sWorld.GetGameTime();
 
     if (combat)
         ++m_combatResetCount;

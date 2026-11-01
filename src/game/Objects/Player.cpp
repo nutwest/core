@@ -202,7 +202,7 @@ Player::Player(WorldSession* session) : Unit(),
         j.invitedToInstance = 0;
     }
 
-    m_loginTime = time(nullptr);
+    m_loginTime = sWorld.GetGameTime();
     m_createTime = m_loginTime;
     m_lastTick = m_loginTime;
     m_weaponProficiency = 0;
@@ -498,7 +498,7 @@ bool Player::Create(uint32 guidlow, std::string const& name, uint8 race, uint8 c
     SetUInt32Value(PLAYER_FIELD_COINAGE, sWorld.getConfig(CONFIG_UINT32_START_PLAYER_MONEY));
 
     // Played time
-    m_lastTick = time(nullptr);
+    m_lastTick = sWorld.GetGameTime();
     m_playedTime[PLAYED_TIME_TOTAL] = 0;
     m_playedTime[PLAYED_TIME_LEVEL] = 0;
 
@@ -1123,7 +1123,7 @@ void Player::Update(uint32 update_diff, uint32 p_time)
         m_AI->UpdateAI(p_time);
     SetCanDelayTeleport(false);
 
-    time_t now = time(nullptr);
+    time_t now = sWorld.GetGameTime();
 
     UpdatePvPFlagTimer(update_diff);
 
@@ -4139,7 +4139,7 @@ bool Player::ResetTalents(bool noCost)
             m_resetTalentsMultiplier = sWorld.getConfig(CONFIG_UINT32_RESPEC_MAX_MULTIPLIER);
         }
 
-        m_resetTalentsTime = time(nullptr);
+        m_resetTalentsTime = sWorld.GetGameTime();
     }
 
     //FIXME: remove pet before or after unlearn spells? for now after unlearn to allow removing of talent related, pet affecting auras
@@ -11460,7 +11460,7 @@ void Player::AddItemToBuyBackSlot(Item* pItem, uint32 money, ObjectGuid vendorGu
     sLog.Out(LOG_BASIC, LOG_LVL_DEBUG, "STORAGE: AddItemToBuyBackSlot item = %u, slot = %u", pItem->GetEntry(), slot);
 
     m_items[slot] = pItem;
-    time_t base = time(nullptr);
+    time_t base = sWorld.GetGameTime();
     uint32 etime = uint32(base - m_loginTime + (30 * 3600));
     uint32 eslot = slot - BUYBACK_SLOT_START;
 
@@ -12858,7 +12858,7 @@ void Player::AddQuest(Quest const* pQuest, Object* questGiver)
 
         AddTimedQuest(questId);
         questStatusData.m_timer = limittime * IN_MILLISECONDS;
-        qtime = static_cast<uint32>(time(nullptr)) + limittime;
+        qtime = static_cast<uint32>(sWorld.GetGameTime()) + limittime;
     }
     else
         questStatusData.m_timer = 0;
@@ -19652,7 +19652,7 @@ void Player::SummonIfPossible(bool agree)
     }
 
     // expire and auto declined
-    if (m_summon_expire < time(nullptr))
+    if (m_summon_expire < sWorld.GetGameTime())
         return;
 
     // stop taxi flight at summon
@@ -20186,7 +20186,7 @@ uint32 Player::GetCorpseReclaimDelay(bool pvp) const
             (!pvp && !sWorld.getConfig(CONFIG_BOOL_DEATH_CORPSE_RECLAIM_DELAY_PVE)))
         return copseReclaimDelay[0];
 
-    time_t now = time(nullptr);
+    time_t now = sWorld.GetGameTime();
     // 0..2 full period
     uint32 count = (now < m_deathExpireTime) ? uint32((m_deathExpireTime - now) / DEATH_EXPIRE_STEP) : 0;
     if (count >= 2)
@@ -20202,7 +20202,7 @@ void Player::UpdateCorpseReclaimDelay()
             (!pvp && !sWorld.getConfig(CONFIG_BOOL_DEATH_CORPSE_RECLAIM_DELAY_PVE)))
         return;
 
-    time_t now = time(nullptr);
+    time_t now = sWorld.GetGameTime();
     if (now < m_deathExpireTime)
     {
         // full and partly periods 1..3
@@ -20243,7 +20243,7 @@ void Player::SendCorpseReclaimDelay(bool load) const
 
         time_t expected_time = corpse->GetGhostTime() + copseReclaimDelay[count];
 
-        time_t now = time(nullptr);
+        time_t now = sWorld.GetGameTime();
         if (now >= expected_time)
             return;
 
@@ -21140,7 +21140,7 @@ void Player::SetRestType(RestType restType, uint32 areaTriggerId /*= 0*/)
         SetFlag(PLAYER_FLAGS, PLAYER_FLAGS_RESTING);
 
         m_innTriggerId = areaTriggerId;
-        m_timeInnEnter = time(nullptr);
+        m_timeInnEnter = sWorld.GetGameTime();
 
         if (sWorld.IsFFAPvPRealm())
             SetFFAPvP(false);

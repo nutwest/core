@@ -42,7 +42,7 @@ Corpse::Corpse(CorpseType type) : WorldObject(), loot(this), lootRecipient(nullp
 
     m_type = type;
 
-    m_time = time(nullptr);
+    m_time = sWorld.GetGameTime();
 
     lootForBody = false;
 }

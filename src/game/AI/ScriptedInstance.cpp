@@ -5,6 +5,7 @@
 #include "ScriptedInstance.h"
 #include "Player.h"
 #include "GameObject.h"
+#include "World.h"
 
 //Optional uiWithRestoreTime. If not defined, autoCloseTime will be used (if not 0 by default in *_template)
 void ScriptedInstance::DoUseDoorOrButton(uint64 uiGuid, uint32 uiWithRestoreTime, bool bUseAlternativeState)
@@ -172,7 +173,7 @@ void ScriptedInstance_PTR::OnCreatureEnterCombat(Creature* creature)
         std::map<ObjectGuid, time_t>::iterator it = boss_expirations.find(creature->GetObjectGuid());
         if (it == boss_expirations.end())
         {
-            boss_expirations[creature->GetObjectGuid()] = time(nullptr);
+            boss_expirations[creature->GetObjectGuid()] = sWorld.GetGameTime();
             creature->MonsterSay("Remaining time before despawn: 30 minutes.");
         }
     }
@@ -181,7 +182,7 @@ void ScriptedInstance_PTR::OnCreatureEnterCombat(Creature* creature)
 
 void ScriptedInstance_PTR::Update(uint32 diff)
 {
-    time_t expiration = time(nullptr) - 30*60;
+    time_t expiration = sWorld.GetGameTime() - 30*60;
     std::map<ObjectGuid, time_t>::iterator it = boss_expirations.begin();
     for (; it != boss_expirations.end(); ++it)
     {

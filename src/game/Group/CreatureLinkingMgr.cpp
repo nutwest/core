@@ -40,6 +40,7 @@
 #include "SharedDefines.h"
 #include "Creature.h"
 #include "CreatureAI.h"
+#include "World.h"
 
 INSTANTIATE_SINGLETON_1(CreatureLinkingMgr);
 
@@ -561,7 +562,7 @@ void CreatureLinkingHolder::ProcessSlave(CreatureLinkingEvent eventType, Creatur
         if (flag & FLAG_RESPAWN_ON_RESPAWN)
         {
             // Additional check to prevent endless loops (in case whole group respawns on first respawn)
-            if (!pSlave->IsAlive() && pSlave->GetRespawnTime() > time(nullptr))
+            if (!pSlave->IsAlive() && pSlave->GetRespawnTime() > sWorld.GetGameTime())
                 pSlave->Respawn();
         }
         else if (flag & FLAG_DESPAWN_ON_RESPAWN && pSlave->IsAlive())
@@ -632,7 +633,7 @@ bool CreatureLinkingHolder::IsSlaveInRangeOfMaster(Creature const* pBoss, float 
 bool CreatureLinkingHolder::IsRespawnReady(uint32 dbLowGuid, Map* _map) const
 {
     time_t respawnTime = _map->GetPersistentState()->GetCreatureRespawnTime(dbLowGuid);
-    return (!respawnTime || respawnTime <= time(nullptr)) && CanSpawn(dbLowGuid, _map, nullptr, 0.0f, 0.0f);
+    return (!respawnTime || respawnTime <= sWorld.GetGameTime()) && CanSpawn(dbLowGuid, _map, nullptr, 0.0f, 0.0f);
 }
 
 // Function to check if a passive spawning condition is met

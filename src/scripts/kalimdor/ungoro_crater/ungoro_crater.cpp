@@ -349,10 +349,10 @@ bool AreaTrigger_at_scent_larkorwi(Player* pPlayer, AreaTriggerEntry const* pAt)
         if (!GetClosestCreatureWithEntry(pPlayer, NPC_LARKORWI_MATE, 25.0f))
         {
             static std::unordered_map<uint32, time_t> cooldown;
-            if (cooldown[pAt->id] < time(nullptr))
+            if (cooldown[pAt->id] < WorldTimer::getGameTime())
             {
                 pPlayer->SummonCreature(NPC_LARKORWI_MATE, pAt->x, pAt->y, pAt->z, 3.3f, TEMPSUMMON_TIMED_OR_DEAD_DESPAWN, 2 * MINUTE * IN_MILLISECONDS);
-                cooldown[pAt->id] = time(nullptr) + MINUTE;
+                cooldown[pAt->id] = WorldTimer::getGameTime() + MINUTE;
             }
         }
     }

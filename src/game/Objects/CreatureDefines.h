@@ -574,7 +574,7 @@ struct VendorItemData
 struct VendorItemCount
 {
     explicit VendorItemCount(uint32 _item, uint32 _count, uint32 _restockDelay)
-        : itemId(_item), count(_count), restockDelay(_restockDelay), lastIncrementTime(time(nullptr)) {}
+        : itemId(_item), count(_count), restockDelay(_restockDelay), lastIncrementTime(WorldTimer::getGameTime()) {}
 
     uint32 itemId;
     uint32 count;

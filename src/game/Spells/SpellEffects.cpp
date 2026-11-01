@@ -1020,7 +1020,7 @@ void Spell::EffectDummy(SpellEffectIndex effIdx)
                         return;
                     }
 
-                    pGameObj->SetRespawnTime(creatureTarget->GetRespawnTime() - time(nullptr));
+                    pGameObj->SetRespawnTime(creatureTarget->GetRespawnTime() - sWorld.GetGameTime());
                     pGameObj->SetOwnerGuid(m_caster->GetObjectGuid());
                     //Pose un soucis(Maxinus)
                     // pGameObj->SetUInt32Value(GAMEOBJECT_LEVEL, m_caster->GetLevel());

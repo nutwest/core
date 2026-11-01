@@ -1808,7 +1808,7 @@ class Player final: public Unit
         void SendSummonRequest(ObjectGuid summonerGuid, uint32 mapId, uint32 zoneId, float x, float y, float z);
         void SetSummonPoint(uint32 mapid, float x, float y, float z)
         {
-            m_summon_expire = time(nullptr) + MAX_PLAYER_SUMMON_DELAY;
+            m_summon_expire = WorldTimer::getGameTime() + MAX_PLAYER_SUMMON_DELAY;
             m_summon_mapid = mapid;
             m_summon_x = x;
             m_summon_y = y;

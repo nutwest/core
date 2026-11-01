@@ -110,7 +110,7 @@ bool ChatHandler::HandleNpcInfoCommand(char* /*args*/)
     uint32 Entry = target->GetEntry();
     CreatureInfo const* cInfo = target->GetCreatureInfo();
 
-    time_t curRespawnDelay = target->GetRespawnTimeEx() - time(nullptr);
+    time_t curRespawnDelay = target->GetRespawnTimeEx() - sWorld.GetGameTime();
     if (curRespawnDelay < 0)
         curRespawnDelay = 0;
     std::string curRespawnDelayStr = secsToTimeString(curRespawnDelay, true);

@@ -846,7 +846,7 @@ inline void Map::UpdateCells(uint32 map_diff)
         return;
 
     m_lastCellsUpdate = now;
-    m_currentTime = std::chrono::time_point_cast<std::chrono::milliseconds>(Clock::now());
+    m_currentTime = WorldTimer::getClockTime();
 
     // update active cells around players and active objects
     if (IsContinent() && m_cellThreads->status() == ThreadPool::Status::READY)
@@ -913,7 +913,7 @@ void Map::UpdatePlayers()
     if (diff < sWorld.getConfig(CONFIG_UINT32_MAPUPDATE_UPDATE_PLAYERS_DIFF))
         return;
 
-    m_currentTime = std::chrono::time_point_cast<std::chrono::milliseconds>(Clock::now());
+    m_currentTime = WorldTimer::getClockTime();
 
     ++m_inactivePlayersSkippedUpdates;
     bool updateInactivePlayers = m_inactivePlayersSkippedUpdates > sWorld.getConfig(CONFIG_UINT32_INACTIVE_PLAYERS_SKIP_UPDATES);
@@ -953,7 +953,7 @@ void Map::DoUpdate(uint32 maxDiff)
 void Map::Update(uint32 t_diff)
 {
     uint32 updateMapTime = WorldTimer::getMSTime();
-    m_currentTime = std::chrono::time_point_cast<std::chrono::milliseconds>(Clock::now());
+    m_currentTime = WorldTimer::getClockTime();
     m_dynamicTree.update(t_diff);
 
     UpdateSessionsMovementAndSpellsIfNeeded();
@@ -3700,7 +3700,7 @@ void Map::RemoveOldBones(uint32 const diff)
 
     m_bonesCleanupTimer = 0u;
 
-    time_t now = time(nullptr);
+    time_t now = sWorld.GetGameTime();
     std::lock_guard<MapMutexType> guard(m_bonesLock);
     for (auto iter = m_bones.begin(); iter != m_bones.end();)
     {

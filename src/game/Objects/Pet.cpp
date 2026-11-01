@@ -34,6 +34,7 @@
 #include "Util.h"
 #include "CharacterDatabaseCache.h"
 #include "Utilities/Random.h"
+#include "World.h"
 
 //numbers represent minutes * 100 while happy (you get 100 loyalty points per min while happy)
 uint32 const Pet::LevelUpLoyalty[6] =
@@ -340,7 +341,7 @@ bool Pet::LoadPetFromDB(Player* owner, uint32 petEntry, uint32 petNumber, bool c
     }
 
     // since last save (in seconds)
-    uint32 timediff = uint32(time(nullptr) - m_pTmpCache->saveTime);
+    uint32 timediff = uint32(sWorld.GetGameTime() - m_pTmpCache->saveTime);
 
     //load spells/cooldowns/auras
     _LoadAuras(timediff);
@@ -530,7 +531,7 @@ void Pet::SavePetToDB(PetSaveMode mode)
         m_pTmpCache->currentHealth = curhealth;
         m_pTmpCache->currentMana = curmana;
         m_pTmpCache->currentHappiness = GetPower(POWER_HAPPINESS);
-        m_pTmpCache->saveTime = time(nullptr);
+        m_pTmpCache->saveTime = sWorld.GetGameTime();
         m_pTmpCache->resetTalentsCost = m_resetTalentsCost;
         m_pTmpCache->resetTalentsTime = m_resetTalentsTime;
         m_pTmpCache->createdBySpell = GetUInt32Value(UNIT_CREATED_BY_SPELL);

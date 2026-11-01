@@ -31,6 +31,7 @@
 #include "Pet.h"
 #include "Group.h"
 #include "Utilities/Random.h"
+#include "World.h"
 
 void WorldSession::HandlePetAction(WorldPackets::Pet::PetAction const& packet)
 {
@@ -441,7 +442,7 @@ void WorldSession::HandlePetUnlearnOpcode(WorldPackets::Pet::PetUnlearn const& p
     // relearn pet passives
     pet->LearnPetPassives();
 
-    pet->m_resetTalentsTime = time(nullptr);
+    pet->m_resetTalentsTime = sWorld.GetGameTime();
     pet->m_resetTalentsCost = cost;
     GetPlayer()->ModifyMoney(-(int32)cost);
 

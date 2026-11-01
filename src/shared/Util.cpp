@@ -19,6 +19,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#include <atomic>
 #include "Util.h"
 #include "Timer.h"
 #include "Log.h"
@@ -87,11 +88,60 @@ uint32 WorldTimer::tick()
     return getMSTimeDiff(m_iPrevTime, m_iTime);
 }
 
-uint32 WorldTimer::getMSTime()
+
+// World time in ms since the application started. The two atomics are all of the pause: the world
+// thread sets them, every thread reads them.
+static std::atomic<int64> s_frozenAtMs(-1);
+static std::atomic<int64> s_pausedTotalMs(0);
+
+static int64 RealMs()
 {
     using namespace std::chrono;
 
-    return static_cast<uint32>(duration_cast<milliseconds>(steady_clock::now().time_since_epoch() - GetApplicationStartTime().time_since_epoch()).count());
+    return duration_cast<milliseconds>(steady_clock::now() - GetApplicationStartTime()).count();
+}
+
+static int64 WorldMs()
+{
+    int64 const frozenAt = s_frozenAtMs.load();
+    return frozenAt >= 0 ? frozenAt : RealMs() - s_pausedTotalMs.load();
+}
+
+uint32 WorldTimer::getMSTime()
+{
+    return static_cast<uint32>(WorldMs());
+}
+
+void WorldTimer::setPaused(bool paused)
+{
+    if (paused == isPaused())
+        return;
+    if (paused)
+        s_frozenAtMs.store(RealMs() - s_pausedTotalMs.load());
+    else
+    {
+        // The total first: a reader that sees the clock running must see the new total.
+        s_pausedTotalMs.store(RealMs() - s_frozenAtMs.load());
+        s_frozenAtMs.store(-1);
+    }
+}
+
+bool WorldTimer::isPaused()
+{
+    return s_frozenAtMs.load() >= 0;
+}
+
+TimePoint WorldTimer::getClockTime()
+{
+    using namespace std::chrono;
+
+    static TimePoint const wallAtStart = time_point_cast<milliseconds>(Clock::now()) - milliseconds(RealMs());
+    return wallAtStart + milliseconds(WorldMs());
+}
+
+time_t WorldTimer::getGameTime()
+{
+    return Clock::to_time_t(getClockTime());
 }
 
 Tokens StrSplit(std::string const& src, std::string const& sep)

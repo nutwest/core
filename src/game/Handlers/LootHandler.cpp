@@ -509,7 +509,7 @@ void WorldSession::DoLootRelease(ObjectGuid lguid)
                 // respawn partially looted chests 5 mins after being opened
                 if (go->GetGoType() == GAMEOBJECT_TYPE_CHEST)
                 {
-                    go->SetCooldownTime(time(nullptr) + 5 * MINUTE);
+                    go->SetCooldownTime(sWorld.GetGameTime() + 5 * MINUTE);
                 }
             }
             break;

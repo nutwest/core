@@ -133,7 +133,7 @@ bool ChatHandler::HandleGameObjectTargetCommand(char* args)
 
     if (target)
     {
-        time_t curRespawnDelay = target->GetRespawnTimeEx() - time(nullptr);
+        time_t curRespawnDelay = target->GetRespawnTimeEx() - sWorld.GetGameTime();
         if (curRespawnDelay < 0)
             curRespawnDelay = 0;
 

@@ -24,6 +24,7 @@
 
 #include "Common.h"
 #include <chrono>
+#include <ctime>
 
 inline std::chrono::steady_clock::time_point GetApplicationStartTime()
 {
@@ -39,6 +40,14 @@ class WorldTimer
 public:
     //get current server time
     static uint32 getMSTime();
+
+    // The party pause: world time holds still while paused, then runs behind real time by the
+    // total paused. Timers built on these clocks need no adjusting on resume.
+    static void setPaused(bool paused);
+    static bool isPaused();
+    // The wall clock in world time, and the same in seconds.
+    static TimePoint getClockTime();
+    static time_t getGameTime();
 
     //get time difference between two timestamps
     static uint32 getMSTimeDiff(uint32 const& oldMSTime, uint32 const& newMSTime)

@@ -30,6 +30,7 @@
 #include "CellImpl.h"
 #include "GridNotifiersImpl.h"
 #include "ObjectGuid.h"
+#include "World.h"
 
 #include <cmath>
 
@@ -281,7 +282,7 @@ void ObjectAccessor::ConvertCorpseForPlayer(ObjectGuid player_guid, Player const
 
 void ObjectAccessor::RemoveOldCorpses()
 {
-    time_t now = time(nullptr);
+    time_t now = sWorld.GetGameTime();
     Player2CorpsesMapType::iterator next;
     for (Player2CorpsesMapType::iterator itr = i_player2corpse.begin(); itr != i_player2corpse.end(); itr = next)
     {

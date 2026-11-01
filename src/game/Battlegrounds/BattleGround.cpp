@@ -1598,7 +1598,7 @@ void BattleGround::SpawnBGCreature(ObjectGuid guid, BattleGroundCreatureSpawnMod
     if (mode == RESPAWN_FORCED)
     {
         obj->SetRespawnDelay(RESPAWN_2MINUTES);
-        if (obj->GetRespawnTime() > time(nullptr))
+        if (obj->GetRespawnTime() > sWorld.GetGameTime())
             obj->SetRespawnTime(1);
     }
     else if (mode == DESPAWN_FORCED)
@@ -1610,7 +1610,7 @@ void BattleGround::SpawnBGCreature(ObjectGuid guid, BattleGroundCreatureSpawnMod
     else if (mode == RESPAWN_START)
     {
         obj->SetRespawnDelay(RESPAWN_2MINUTES);
-        if (obj->GetRespawnTime() > time(nullptr))
+        if (obj->GetRespawnTime() > sWorld.GetGameTime())
             obj->SetRespawnTime(1);
     }
     else if (mode == RESPAWN_STOP)
@@ -1623,7 +1623,7 @@ void BattleGround::SpawnBGCreature(ObjectGuid guid, BattleGroundCreatureSpawnMod
         }
         else
         {
-            if (obj->GetRespawnTime() < time(nullptr))
+            if (obj->GetRespawnTime() < sWorld.GetGameTime())
                 obj->SetRespawnTime(1);
         }
     }

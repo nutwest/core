@@ -24,6 +24,7 @@
 */
 
 #include "World.h"
+#include "WorldSocket.h"
 #include "Database/DatabaseEnv.h"
 #include "Config/Config.h"
 #include "Platform/Define.h"
@@ -1982,7 +1983,7 @@ void World::ProcessAsyncPackets()
 void World::Update(uint32 diff)
 {
     m_currentMSTime = WorldTimer::getMSTime();
-    m_currentTime = std::chrono::time_point_cast<std::chrono::milliseconds>(Clock::now());
+    m_currentTime = WorldTimer::getClockTime();
     m_currentDiff = diff;
 
     // Update the different timers
@@ -2015,6 +2016,13 @@ void World::Update(uint32 diff)
         std::lock_guard<std::mutex> lock(m_asyncPacketsMutex);
 
         GetMessager().Execute(this);
+
+        // The party pause: past this point no time passes, and a client gone takes the pause with it.
+        if (WorldTimer::isPaused())
+        {
+            _ResumeWithoutClient();
+            diff = 0;
+        }
 
         // <li> Handle session updates
         uint32 updateSessionsTime = WorldTimer::getMSTime();
@@ -2663,11 +2671,25 @@ bool World::RemoveBanAccount(BanMode mode, std::string const& source, std::strin
     return true;
 }
 
+// A party pause holds only while a client plays: with none, nothing could lift it.
+void World::_ResumeWithoutClient()
+{
+    for (auto const& itr : m_sessions)
+    {
+        WorldSession* session = itr.second;
+        std::shared_ptr<WorldSocket> socket = session->GetSocket();
+        if (socket && !socket->IsClosing() && session->GetPlayer())
+            return;
+    }
+    WorldTimer::setPaused(false);
+    sLog.Out(LOG_BASIC, LOG_LVL_MINIMAL, "[PartyPause] the client is gone: resumed, world_ms=%u", WorldTimer::getMSTime());
+}
+
 // Update the game time
 void World::_UpdateGameTime()
 {
     // update the time
-    time_t thisTime = time(nullptr);
+    time_t thisTime = WorldTimer::getGameTime();
     uint32 elapsed = uint32(thisTime - m_gameTime);
     m_gameTime = thisTime;
     m_gameDay = (m_gameTime + m_timeZoneOffset) / DAY;

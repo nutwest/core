@@ -274,7 +274,7 @@ Aura::Aura(SpellEntry const* spellproto, SpellEffectIndex eff, int32 *currentBas
     m_currentBasePoints = currentBasePoints ? *currentBasePoints : spellproto->CalculateSimpleValue(eff);
 
     m_positive = spellproto->IsPositiveEffect(m_effIndex);
-    m_applyTime = time(nullptr);
+    m_applyTime = sWorld.GetGameTime();
 
     float damage;
     if (!caster)
@@ -315,7 +315,7 @@ void Aura::Refresh(Unit* caster, Unit* target, SpellAuraHolder* pRefreshWithHold
         return;
     m_periodicTick = 0;
     Player* modOwner = caster ? caster->GetSpellModOwner() : nullptr;
-    m_applyTime = time(nullptr);
+    m_applyTime = sWorld.GetGameTime();
     CalculatePeriodic(modOwner, true);
 
     // re-calculation of damage amount
@@ -365,7 +365,7 @@ void Aura::Refresh(Unit* caster, Unit* target, SpellAuraHolder* pRefreshWithHold
 void SpellAuraHolder::Refresh(Unit* caster, Unit* target, SpellAuraHolder* pRefreshWithHolder)
 {
     m_casterGuid = caster ? caster->GetObjectGuid() : target->GetObjectGuid();
-    m_applyTime = time(nullptr);
+    m_applyTime = sWorld.GetGameTime();
     m_duration = pRefreshWithHolder->GetAuraDuration();
     m_maxDuration = pRefreshWithHolder->GetAuraMaxDuration();
     for (uint8 i = 0 ; i < MAX_EFFECT_INDEX; ++i)
@@ -6662,7 +6662,7 @@ SpellAuraHolder::SpellAuraHolder(SpellEntry const* spellproto, Unit* target, Uni
     else
         m_realCasterGuid = m_casterGuid;
 
-    m_applyTime      = time(nullptr);
+    m_applyTime      = sWorld.GetGameTime();
     m_isPassive      = IsPassiveSpell(GetId()) || (spellproto->Attributes == SPELL_ATTR_DO_NOT_DISPLAY && spellproto->DurationIndex == 21);
     m_isDeathPersist = spellproto->IsDeathPersistentSpell();
     m_isSingleTarget = spellproto->HasSingleTargetAura();

@@ -362,7 +362,7 @@ class Creature : public Unit
 
         time_t const& GetRespawnTime() const { return m_respawnTime; }
         time_t GetRespawnTimeEx() const;
-        void SetRespawnTime(uint32 respawn) { m_respawnTime = respawn ? time(nullptr) + respawn : 0; }
+        void SetRespawnTime(uint32 respawn) { m_respawnTime = respawn ? WorldTimer::getGameTime() + respawn : 0; }
         void Respawn();
         void SaveRespawnTime() override;
         void ApplyDynamicRespawnDelay(uint32& delay);

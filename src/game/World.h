@@ -897,6 +897,7 @@ class World
         LFGQueue& GetLFGQueue() { return m_lfgQueue; }
     protected:
         void _UpdateGameTime();
+        void _ResumeWithoutClient();
         // callback for UpdateRealmCharacters
         void _UpdateRealmCharCount(std::unique_ptr<QueryResult> resultCharCount, uint32 accountId);
 
