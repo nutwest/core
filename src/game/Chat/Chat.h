@@ -283,6 +283,8 @@ class ChatHandler
         bool HandlePartySwapCommand(char * args);
         bool HandlePartyStatusCommand(char * args);
         bool HandlePartyLeadCommand(char * args);
+        bool HandlePartyPauseCommand(char * args);
+        bool HandlePartyProbeCommand(char * args);
         bool HandlePartyBotSetRoleCommand(char * args);
         bool HandlePartyBotAttackStartCommand(char * args);
         bool HandlePartyBotAttackStopCommand(char * args);

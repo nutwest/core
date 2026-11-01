@@ -108,6 +108,7 @@ class PlayerBotMgr
         // `botGuid`, which becomes the client's character, and the old one becomes a party bot.
         // World thread only, between updates (queued by `.party swap`).
         void SwapPartyControl(ObjectGuid clientGuid, ObjectGuid botGuid, uint32 queuedAt);
+        void SetPartyPaused(ObjectGuid clientGuid, bool paused);
 
         uint32 GenBotAccountId() { return ++m_maxAccountId; }
         PlayerBotStats& GetStats(){ return m_stats; }

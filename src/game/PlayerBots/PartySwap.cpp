@@ -28,6 +28,11 @@
 #include "PlayerBotMgr.h"
 #include "PartyBotAI.h"
 #include "Bag.h"
+#include "CellImpl.h"
+#include "GridNotifiers.h"
+#include "GridNotifiersImpl.h"
+#include "SpellAuras.h"
+#include "SpellMgr.h"
 #include "Language.h"
 #include "Chat.h"
 #include "Group.h"
@@ -302,6 +307,138 @@ bool ChatHandler::HandlePartyLeadCommand(char* /*args*/)
     return true;
 }
 
+// The party's pause. WorldTimer holds the world's clocks, so World::Update reaches the maps with
+// no time passed: nothing moves or ticks, and no absolute deadline needs adjusting on resume.
+// Sessions, the World messager and the async chat thread keep running, so `.party` still works.
+bool ChatHandler::HandlePartyPauseCommand(char* args)
+{
+    bool paused;
+    if (!ExtractOnOff(&args, paused))
+    {
+        SendSysMessage(LANG_USE_BOL);
+        SetSentErrorMessage(true);
+        return false;
+    }
+    ObjectGuid const clientGuid = m_session->GetPlayer()->GetObjectGuid();
+    sWorld.GetMessager().AddMessage([clientGuid, paused](World*)
+    {
+        sPlayerBotMgr.SetPartyPaused(clientGuid, paused);
+    });
+    return true;
+}
+
+void PlayerBotMgr::SetPartyPaused(ObjectGuid clientGuid, bool paused)
+{
+    Player* client = sObjectAccessor.FindPlayer(clientGuid);
+    if (!client)
+        return;
+    WorldSession* session = client->GetSession();
+
+    char const* blocker = nullptr;
+    if (paused)
+    {
+        if (session->PlayerLoading() || session->PlayerLogout() || session->IsLogingOut())
+            blocker = "you are logging in or out";
+        else if (client->IsBeingTeleported())
+            blocker = "a teleport is under way";
+        else if (client->IsTaxiFlying())
+            blocker = "a flight is under way";
+    }
+    if (blocker)
+    {
+        ChatHandler(client).PSendSysMessage("Cannot pause: %s.", blocker);
+        sLog.Out(LOG_BASIC, LOG_LVL_MINIMAL, "[PartyPause] refused, %s", blocker);
+    }
+    else
+    {
+        WorldTimer::setPaused(paused);
+        sLog.Out(LOG_BASIC, LOG_LVL_MINIMAL, "[PartyPause] %s world_ms=%u", paused ? "on" : "off", WorldTimer::getMSTime());
+    }
+
+    // The client always hears the state that holds, a refusal included.
+    WorldPacket notice(SMSG_PARTY_PAUSE, 5);
+    notice << uint8(WorldTimer::isPaused());
+    notice << uint32(WorldTimer::getMSTime());
+    session->SendPacket(&notice);
+}
+
+// The pause checks' timers, armed by `.party probe <seconds>` and read by `.party status`.
+static uint32 const PROBE_AURA_SPELL = 1126; // Mark of the Wild
+static uint32 const PROBE_COOLDOWN_SPELL = 498; // Divine Protection
+static ObjectGuid s_probeRespawn;
+static ObjectGuid s_probeWatch;
+
+// `.party probe <seconds>` gives the client an aura and a cooldown of that length and despawns the
+// nearest spawned creature for that long; `.party probe drop` closes the client's socket.
+bool ChatHandler::HandlePartyProbeCommand(char* args)
+{
+    WorldSession* session = m_session;
+    if (args && strcmp(args, "drop") == 0)
+    {
+        sWorld.GetMessager().AddMessage([session](World*) { session->KickPlayer(); });
+        return true;
+    }
+    uint32 seconds = 0;
+    if (!ExtractUInt32(&args, seconds) || !seconds)
+    {
+        SendSysMessage("Usage: .party probe <seconds>|drop");
+        SetSentErrorMessage(true);
+        return false;
+    }
+    ObjectGuid const clientGuid = session->GetPlayer()->GetObjectGuid();
+    sWorld.GetMessager().AddMessage([clientGuid, seconds](World*)
+    {
+        Player* client = sObjectAccessor.FindPlayer(clientGuid);
+        if (!client)
+            return;
+        if (SpellAuraHolder* holder = client->AddAura(PROBE_AURA_SPELL))
+        {
+            holder->SetAuraMaxDuration(seconds * IN_MILLISECONDS);
+            holder->SetAuraDuration(seconds * IN_MILLISECONDS);
+        }
+        if (SpellEntry const* spell = sSpellMgr.GetSpellEntry(PROBE_COOLDOWN_SPELL))
+            client->AddCooldown(spell, nullptr, false, seconds * IN_MILLISECONDS);
+
+        // The two nearest spawned creatures: one to respawn, one to watch stand or wander.
+        std::list<Creature*> nearby;
+        MaNGOS::AnyUnitInObjectRangeCheck check(client, 100.0f);
+        MaNGOS::CreatureListSearcher<MaNGOS::AnyUnitInObjectRangeCheck> searcher(nearby, check);
+        Cell::VisitGridObjects(client, searcher, 100.0f);
+        nearby.remove_if([](Creature* c) { return !c->IsAlive() || !c->GetDBTableGUIDLow() || c->IsPet(); });
+        nearby.sort([client](Creature* a, Creature* b) { return a->GetDistance(client) < b->GetDistance(client); });
+        s_probeRespawn.Clear();
+        s_probeWatch.Clear();
+        if (!nearby.empty())
+        {
+            s_probeRespawn = nearby.front()->GetObjectGuid();
+            nearby.front()->ForcedDespawn(0, seconds);
+            nearby.pop_front();
+        }
+        if (!nearby.empty())
+            s_probeWatch = nearby.front()->GetObjectGuid();
+        sLog.Out(LOG_BASIC, LOG_LVL_MINIMAL, "[PartyProbe] armed for %us", seconds);
+    });
+    return true;
+}
+
+// The timers the pause must hold, as `.party status` prints them.
+static void LogPartyProbe(ChatHandler& chat, Player* client)
+{
+    SpellAuraHolder const* aura = client->GetSpellAuraHolder(PROBE_AURA_SPELL);
+    Creature* respawn = client->GetMap()->GetCreature(s_probeRespawn);
+    Creature* watch = client->GetMap()->GetCreature(s_probeWatch);
+    char line[256];
+    snprintf(line, sizeof(line),
+        "[PartyProbe] paused=%u world_ms=%u game_time=%lld aura_ms=%d cooldown_ms=%u mob_alive=%d respawn_left=%lld watch_pos=%.2f,%.2f,%.2f",
+        uint32(WorldTimer::isPaused()), WorldTimer::getMSTime(), (long long)sWorld.GetGameTime(),
+        aura ? aura->GetAuraDuration() : 0, client->GetSpellCooldownLeft(PROBE_COOLDOWN_SPELL),
+        respawn ? int(respawn->IsAlive()) : -1,
+        respawn ? (long long)(respawn->GetRespawnTimeEx() - sWorld.GetGameTime()) : 0ll,
+        watch ? watch->GetPositionX() : 0.0f, watch ? watch->GetPositionY() : 0.0f, watch ? watch->GetPositionZ() : 0.0f);
+    chat.SendSysMessage(line);
+    sLog.Out(LOG_BASIC, LOG_LVL_MINIMAL, "%s", line);
+}
+
 // One line per party member: who plays it, what moves it, where it is and what it fights.
 bool ChatHandler::HandlePartyStatusCommand(char* /*args*/)
 {
@@ -348,5 +485,6 @@ bool ChatHandler::HandlePartyStatusCommand(char* /*args*/)
         SendSysMessage(line);
         sLog.Out(LOG_BASIC, LOG_LVL_MINIMAL, "%s", line);
     }
+    LogPartyProbe(*this, client);
     return true;
 }

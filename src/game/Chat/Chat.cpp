@@ -120,6 +120,8 @@ ChatCommand * ChatHandler::getCommandTable()
         { "swap",       SEC_ADMINISTRATOR,      false, &ChatHandler::HandlePartySwapCommand,           "", nullptr },
         { "status",     SEC_ADMINISTRATOR,      false, &ChatHandler::HandlePartyStatusCommand,         "", nullptr },
         { "lead",       SEC_ADMINISTRATOR,      false, &ChatHandler::HandlePartyLeadCommand,           "", nullptr },
+        { "pause",      SEC_ADMINISTRATOR,      false, &ChatHandler::HandlePartyPauseCommand,          "", nullptr },
+        { "probe",      SEC_ADMINISTRATOR,      false, &ChatHandler::HandlePartyProbeCommand,          "", nullptr },
         { nullptr,      0,                      false, nullptr,                                        "", nullptr },
     };
 

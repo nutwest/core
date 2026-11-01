@@ -2564,6 +2564,18 @@ void ConvertMillisecondToStr(std::chrono::milliseconds& duration, std::stringstr
     durationStr << mm.count() << "m " << ss.count() << "s " << msec.count() << "ms";
 }
 
+uint32 SpellCaster::GetSpellCooldownLeft(uint32 spellId) const
+{
+    auto const itr = m_cooldownMap.FindBySpellId(spellId);
+    if (itr == m_cooldownMap.end())
+        return 0;
+    TimePoint expires;
+    if (!itr->second->GetSpellCDExpireTime(expires))
+        return 0;
+    TimePoint const now = sWorld.GetCurrentClockTime();
+    return expires > now ? uint32((expires - now).count()) : 0;
+}
+
 void SpellCaster::PrintCooldownList(ChatHandler& chat) const
 {
     // print gcd

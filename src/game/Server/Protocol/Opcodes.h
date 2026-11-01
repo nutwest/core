@@ -167,6 +167,11 @@ inline bool IsDefinitelyBogusOpcode(uint16 opcode) { return opcode >= NUM_MSG_TY
 // Body: uint64 old player guid, uint64 new player guid.
 static constexpr uint16 SMSG_PARTY_SWAP = 0x400;
 
+// Not a client opcode: benilla's party pause (`.party pause`). It tells the client the world's
+// pause state, and the client freezes or resumes on it.
+// Body: uint8 paused, uint32 server ms.
+static constexpr uint16 SMSG_PARTY_PAUSE = 0x401;
+
 // Will work for any opcode, might return `<unknown opcode>` and without impl
 OpcodeHandler const& LookupOpcodeHandler(uint16 id);
 // Will work for any opcode, might return `<unknown opcode>`

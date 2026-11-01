@@ -375,6 +375,8 @@ public:
     bool IsSpellReady(SpellEntry const* spellEntry, ItemPrototype const* itemProto = nullptr) const;
     bool IsSpellOnPermanentCooldown(SpellEntry const* spellEntry) const;
     virtual void LockOutSpells(SpellSchoolMask schoolMask, uint32 duration);
+    // The milliseconds left on a spell's own cooldown, 0 with none.
+    uint32 GetSpellCooldownLeft(uint32 spellId) const;
     void PrintCooldownList(ChatHandler& chat) const;
     bool CheckLockout(SpellSchoolMask schoolMask) const;
     void UpdateCooldowns(TimePoint const& now);
