@@ -107,7 +107,10 @@ class PlayerBotMgr
         // Party swap (PartySwap.cpp): the client playing `clientGuid` takes over the party bot
         // `botGuid`, which becomes the client's character, and the old one becomes a party bot.
         // World thread only, between updates (queued by `.party swap`).
-        void SwapPartyControl(ObjectGuid clientGuid, ObjectGuid botGuid, uint32 queuedAt);
+        void SwapPartyControl(ObjectGuid clientGuid, ObjectGuid botGuid, uint32 queuedAt, bool airborne);
+        void PartyLanded(ObjectGuid guid, float x, float y, float z, float o);
+        void UpdatePartyFalls();
+        void EndPartyFall(Player* player, float x, float y, float z, float o);
         void SetPartyPaused(ObjectGuid clientGuid, bool paused);
 
         uint32 GenBotAccountId() { return ++m_maxAccountId; }
@@ -124,6 +127,8 @@ class PlayerBotMgr
 
         std::map<uint64 /*pl guid*/, std::shared_ptr<PlayerBotEntry>> m_bots;
         std::map<uint32 /*account*/, uint32> m_tempBots;
+        // Characters swapped away in the air, and when their hold ends.
+        std::map<ObjectGuid, uint32> m_partyFalls;
         PlayerBotStats m_stats;
 
         uint32 m_confMinRandomBots;

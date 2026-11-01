@@ -92,6 +92,8 @@ public:
 
     std::vector<RaidTargetIcon> m_marksToCC;
     std::vector<RaidTargetIcon> m_marksToFocus;
+    // Swapped away in the air: this AI waits for the landing (PartySwap.cpp).
+    bool m_fallHeld = false;
     ShortTimeTracker m_updateTimer;
     ObjectGuid m_leaderGuid;
     ObjectGuid m_cloneGuid;

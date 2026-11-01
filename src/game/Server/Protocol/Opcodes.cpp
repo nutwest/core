@@ -28,7 +28,7 @@
 struct Handlers
 {
     // TODO: Change to sparse vector or map<> for 1.13+
-    OpcodeHandler handlers[NUM_MSG_TYPES];
+    OpcodeHandler handlers[CMSG_PARTY_LANDED + 1];
 };
 
 template<typename T>
@@ -708,6 +708,7 @@ Handlers BuildOpcodeList()
     DEFINE_HANDLER(CMSG_SET_AMMO,                     STATUS_LOGGEDIN,  PACKET_PROCESS_MAP,           &WorldSession::HandleSetAmmoOpcode);
     INVALID_PACKET(SMSG_CORPSE_RECLAIM_DELAY,         UnhandleReason::SendByServer);
     DEFINE_HANDLER(CMSG_SET_ACTIVE_MOVER,             STATUS_LOGGEDIN,  PACKET_PROCESS_MOVEMENT,      &WorldSession::HandleSetActiveMoverOpcode);
+    DEFINE_HANDLER(CMSG_PARTY_LANDED,                 STATUS_LOGGEDIN,  PACKET_PROCESS_WORLD,         &WorldSession::HandlePartyLandedOpcode);
     DEFINE_HANDLER(CMSG_PET_CANCEL_AURA,              STATUS_LOGGEDIN,  PACKET_PROCESS_MAP,           &WorldSession::HandlePetCancelAuraOpcode);
     INVALID_PACKET(CMSG_PLAYER_AI_CHEAT,              UnhandleReason::Unhandled);
     DEFINE_HANDLER(CMSG_CANCEL_AUTO_REPEAT_SPELL,     STATUS_LOGGEDIN,  PACKET_PROCESS_MAP,           &WorldSession::HandleCancelAutoRepeatSpellOpcode);
@@ -950,7 +951,7 @@ OpcodeHandler emptyHandler;
 
 OpcodeHandler const& LookupOpcodeHandler(uint16 id)
 {
-    if (id >= NUM_MSG_TYPES)
+    if (id > CMSG_PARTY_LANDED)
         return emptyHandler;
     return handlerList.handlers[id];
 }

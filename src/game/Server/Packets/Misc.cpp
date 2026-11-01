@@ -95,6 +95,11 @@ void WorldPackets::Misc::InspectHonorStats::ReadFromWorldPacket(WorldPacket& rec
     recv_data >> guid;
 }
 
+void WorldPackets::Misc::PartyLanded::ReadFromWorldPacket(WorldPacket& recv_data)
+{
+    recv_data >> guid >> x >> y >> z >> orientation;
+}
+
 void WorldPackets::Misc::SetActiveMover::ReadFromWorldPacket(WorldPacket& recv_data)
 {
     recv_data >> guid;

@@ -169,6 +169,16 @@ namespace WorldPackets { namespace Misc
         void ReadFromWorldPacket(WorldPacket& recv_data) override;
     };
 
+    class PartyLanded final : public ClientPacket
+    {
+    public:
+        ObjectGuid guid;
+        float x = 0.0f, y = 0.0f, z = 0.0f, orientation = 0.0f;
+
+        explicit PartyLanded() : ClientPacket(CMSG_PARTY_LANDED) {}
+        void ReadFromWorldPacket(WorldPacket& recv_data) override;
+    };
+
     class SetActiveMover final : public ClientPacket
     {
     public:

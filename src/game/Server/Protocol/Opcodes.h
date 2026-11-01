@@ -159,7 +159,7 @@ struct OpcodeHandler
 };
 
 // returns true if it's completely out of range
-inline bool IsDefinitelyBogusOpcode(uint16 opcode) { return opcode >= NUM_MSG_TYPES; }
+inline bool IsDefinitelyBogusOpcode(uint16 opcode) { return opcode >= NUM_MSG_TYPES && opcode != CMSG_PARTY_LANDED; }
 
 // Not a client opcode: benilla's party swap (`.party swap`). It precedes the new character's
 // login burst and tells the client which player it now controls. It lies outside the client's

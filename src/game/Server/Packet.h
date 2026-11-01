@@ -10,6 +10,11 @@
  */
 uint16 constexpr OPCODE_WILL_BE_SET_IN_READ_FUNCTION = 0xFFFF;
 
+// Not a client opcode: benilla's landing of a character it swapped away in the air. The one opcode
+// past the client's table a client may send, and only benilla does.
+// Body: uint64 guid, float x, y, z, orientation.
+static constexpr uint16 CMSG_PARTY_LANDED = 0x402;
+
 class Packet
 {
 protected:

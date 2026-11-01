@@ -50,6 +50,11 @@
 #include "World.h"
 #include "WorldPacket.h"
 #include "WorldSession.h"
+// A character swapped away in the air. Its client simulates a fall, not the server, so it finishes
+// on that client: until CMSG_PARTY_LANDED comes, its bot AI waits and no stop goes out. It lands in
+// world time, so a pause holds this deadline too.
+static uint32 const PARTY_FALL_TIMEOUT_MS = 30 * IN_MILLISECONDS;
+
 
 static PartyBotAI* GetPartyBotAI(Player const* player)
 {
@@ -78,6 +83,8 @@ static std::string PartySwapBlocker(Player* client, Player* target)
         return "that character is not a party bot";
     if (bot->state != PB_STATE_ONLINE || bot->requestRemoval || !ai->m_initialized)
         return "that party bot is loading or leaving";
+    if (ai->m_fallHeld)
+        return "that character is in the air";
     if (ai->m_leaderGuid != client->GetObjectGuid())
         return "that party bot follows someone else";
 
@@ -141,15 +148,17 @@ bool ChatHandler::HandlePartySwapCommand(char* args)
     // thread's single-threaded point (World::Update, before the sessions update).
     ObjectGuid const clientGuid = client->GetObjectGuid();
     uint32 const queuedAt = WorldTimer::getMSTime();
+    // `air`: the client has this character in the air, simulating its fall, which only it knows.
+    bool const airborne = args && strstr(args, "air");
     sLog.Out(LOG_BASIC, LOG_LVL_MINIMAL, "[PartySwap] %s -> %s: queued", client->GetName(), target->GetName());
-    sWorld.GetMessager().AddMessage([clientGuid, targetGuid, queuedAt](World*)
+    sWorld.GetMessager().AddMessage([clientGuid, targetGuid, queuedAt, airborne](World*)
     {
-        sPlayerBotMgr.SwapPartyControl(clientGuid, targetGuid, queuedAt);
+        sPlayerBotMgr.SwapPartyControl(clientGuid, targetGuid, queuedAt, airborne);
     });
     return true;
 }
 
-void PlayerBotMgr::SwapPartyControl(ObjectGuid clientGuid, ObjectGuid botGuid, uint32 queuedAt)
+void PlayerBotMgr::SwapPartyControl(ObjectGuid clientGuid, ObjectGuid botGuid, uint32 queuedAt, bool airborne)
 {
     uint32 const start = WorldTimer::getMSTime();
     Player* oldPlayer = sObjectAccessor.FindPlayer(clientGuid);
@@ -195,10 +204,11 @@ void PlayerBotMgr::SwapPartyControl(ObjectGuid clientGuid, ObjectGuid botGuid, u
         newPlayer->CreatePacketBroadcaster();
 
     // 3. The old character is now moved by the server: apply the changes that waited for its
-    //    client's acks, and stop whatever its client was holding down.
+    //    client's acks, and stop whatever its client was holding down. A character in the air
+    //    stays as it is: its client finishes the fall.
     oldPlayer->ResolvePendingMovementChanges(true, true);
     oldPlayer->SetSplineDonePending(false);
-    if (oldPlayer->IsMoving())
+    if (!airborne && oldPlayer->IsMoving())
         oldPlayer->StopMoving(true);
 
     // 4. The bot entry now drives the old character, with an AI of its own: an AI's spell data
@@ -215,6 +225,9 @@ void PlayerBotMgr::SwapPartyControl(ObjectGuid clientGuid, ObjectGuid botGuid, u
     ai->m_marksToFocus = oldAI->m_marksToFocus;
     ai->botEntry = entry.get();
     ai->m_initialized = true;
+    ai->m_fallHeld = airborne;
+    if (airborne)
+        m_partyFalls[oldPlayer->GetObjectGuid()] = WorldTimer::getMSTime() + PARTY_FALL_TIMEOUT_MS;
     entry->ai.reset(ai); // the old AI detaches from the new character (PlayerBotAI::Remove)
     m_bots[entry->playerGUID] = entry;
     oldPlayer->SetAI(ai);
@@ -280,6 +293,70 @@ void PlayerBotMgr::SwapPartyControl(ObjectGuid clientGuid, ObjectGuid botGuid, u
         oldName.c_str(), oldSession->GetAccountId(), uint32(ai->m_role), newPlayer->GetName(),
         WorldTimer::getMSTimeDiff(queuedAt, start), WorldTimer::getMSTimeDiff(start, end));
     ChatHandler(newPlayer).PSendSysMessage("Now playing %s.", newPlayer->GetName());
+}
+
+
+// Ends the hold on `player`, standing at the given place.
+void PlayerBotMgr::EndPartyFall(Player* player, float x, float y, float z, float o)
+{
+    // The landing a client's MSG_MOVE_FALL_LAND would report: fall damage goes by the height. The
+    // fall time's gate is that of the 14.57 yd HandleFall works out, which the height decides.
+    MovementInfo landing = player->m_movementInfo;
+    landing.ChangePosition(x, y, z, o);
+    landing.fallTime = 1229;
+    player->m_movementInfo.AddMovementFlag(MOVEFLAG_FALLINGFAR);
+    player->SetPosition(x, y, z, o);
+    player->HandleFall(landing);
+    player->m_movementInfo.RemoveMovementFlag(MOVEFLAG_MASK_MOVING_OR_TURN | MOVEFLAG_FALLINGFAR);
+    player->m_movementInfo.ChangePosition(x, y, z, o);
+    player->SetFallInformation(0);
+    if (PartyBotAI* ai = GetPartyBotAI(player))
+        ai->m_fallHeld = false;
+}
+
+void PlayerBotMgr::UpdatePartyFalls()
+{
+    uint32 const now = WorldTimer::getMSTime();
+    for (auto it = m_partyFalls.begin(); it != m_partyFalls.end();)
+    {
+        if (now < it->second)
+        {
+            ++it;
+            continue;
+        }
+        if (Player* player = sObjectAccessor.FindPlayer(it->first))
+        {
+            float x, y, z;
+            player->GetPosition(x, y, z);
+            float const ground = player->GetMap()->GetHeight(x, y, z + 1.0f, true, 500.0f);
+            if (ground > INVALID_HEIGHT)
+                z = ground;
+            EndPartyFall(player, x, y, z, player->GetOrientation());
+            player->SendHeartBeat(true);
+            sLog.Out(LOG_BASIC, LOG_LVL_MINIMAL, "[PartySwap] %s: no landing came, placed on the ground at %.2f,%.2f,%.2f",
+                player->GetName(), x, y, z);
+        }
+        it = m_partyFalls.erase(it);
+    }
+}
+
+void PlayerBotMgr::PartyLanded(ObjectGuid guid, float x, float y, float z, float o)
+{
+    auto const it = m_partyFalls.find(guid);
+    if (it == m_partyFalls.end())
+        return;
+    if (Player* player = sObjectAccessor.FindPlayer(guid))
+    {
+        EndPartyFall(player, x, y, z, o);
+        sLog.Out(LOG_BASIC, LOG_LVL_MINIMAL, "[PartySwap] %s: landed at %.2f,%.2f,%.2f, %u ms left",
+            player->GetName(), x, y, z, WorldTimer::getMSTimeDiff(WorldTimer::getMSTime(), it->second));
+    }
+    m_partyFalls.erase(it);
+}
+
+void WorldSession::HandlePartyLandedOpcode(WorldPackets::Misc::PartyLanded const& packet)
+{
+    sPlayerBotMgr.PartyLanded(packet.guid, packet.x, packet.y, packet.z, packet.orientation);
 }
 
 // Makes the client's character the leader of its group. A swap moves the lead, and the group

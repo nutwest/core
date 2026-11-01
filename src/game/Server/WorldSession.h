@@ -512,6 +512,7 @@ class WorldSession
         void HandleMoveWorldportAck();                // for server-side calls
         void HandleMovementOpcodes(WorldPackets::Movement::MovementPacket const& packet);
         void HandleSetActiveMoverOpcode(WorldPackets::Misc::SetActiveMover const& packet);
+        void HandlePartyLandedOpcode(WorldPackets::Misc::PartyLanded const& packet);
         void HandleMoveNotActiveMoverOpcode(WorldPackets::Movement::MoveNotActiveMover const& packet);
         void HandleMoveTimeSkippedOpcode(WorldPackets::Movement::MoveTimeSkipped const& packet);
         void HandleMovementFlagChangeToggleAck(WorldPackets::Movement::MoveFlagChangeAck const& packet);

@@ -189,6 +189,8 @@ void PlayerBotMgr::OnPlayerInWorld(Player* player)
 
 void PlayerBotMgr::Update(uint32 diff)
 {
+    UpdatePartyFalls();
+
     // Temporary bots.
     std::map<uint32, uint32>::iterator it;
     for (it = m_tempBots.begin(); it != m_tempBots.end(); ++it)
